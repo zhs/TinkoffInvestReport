@@ -1,4 +1,5 @@
 /vendor
+*.csv
 .env
 .env.docker
 .DS_store

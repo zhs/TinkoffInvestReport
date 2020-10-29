@@ -23,7 +23,7 @@ func NewClient(token string) *Client {
 }
 
 func (c Client) SaveToFile(filename string, days int) error {
-	result := fmt.Sprintf("%s;%s;%s;%s;%s;%s;%s;%s\n", "id", "date", "type", "total", "price", "qty", "commision", "status")
+	result := fmt.Sprintf("%s;%s;%s;%s;%s;%s;%s;%s;%s\n", "id", "date", "type", "total", "price", "qty", "commision", "current", "status")
 
 	operations, err := c.GetAllOperations(days)
 	if err != nil {
@@ -42,18 +42,21 @@ func (c Client) SaveToFile(filename string, days int) error {
 			continue
 		}
 
+		currentPriceFIGI, _ := c.GetCurrentPrice(operation.FIGI)
+
 		for _, op := range tickerOperations {
 			qty := op.Quantity
 			if op.OperationType == "Sell" {
 				qty = 0 - qty
 			}
-			result += fmt.Sprintf("%s;%s;%s;%s;%s;%d;%s;%s\n", c.NameByFIGI(operation.FIGI),
+			result += fmt.Sprintf("%s;%s;%s;%s;%s;%d;%s;%s;%s\n", c.NameByFIGI(operation.FIGI),
 				dateConvert(op.DateTime),
 				op.OperationType,
 				dotToComma(op.Payment),
 				dotToComma(op.Price),
 				qty,
 				dotToComma(op.Commission.Value),
+				dotToComma(currentPriceFIGI),
 				op.Status,
 			)
 		}
@@ -92,15 +95,18 @@ func (c Client) OperationsByFIGI(figi string, days int) ([]sdk.Operation, error)
 	return operations, nil
 }
 
-func (c Client) GetCurrentPrice(figi string) ([]sdk.Candle, error) {
+func (c Client) GetCurrentPrice(figi string) (currentPrice float64, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	candle, err := c.client.Candles(ctx, time.Now().Add(-30*time.Hour), time.Now(), sdk.CandleInterval1Hour, figi)
+	candles, err := c.client.Candles(ctx, time.Now().Add(-time.Hour), time.Now(), sdk.CandleInterval10Min, figi)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return candle, nil
+	if len(candles) > 0 {
+		return candles[len(candles)-1].ClosePrice, nil
+	}
+	return
 }
 
 func (c Client) GetAllOperations(days int) ([]sdk.Operation, error) {
