@@ -13,10 +13,10 @@ type ReportTransaction struct {
 	Date         time.Time
 	Type         string
 	Total        float64
-	Price        float64
 	Quantity     int
 	Commission   float64
 	CurrentPrice float64
+	Price        float64
 	Status       string
 }
 
@@ -38,6 +38,10 @@ func (r Report) ToCSV() string {
 	return result
 }
 
+func (r Report) ToTermTable() [][]string {
+	return nil
+}
+
 func dateConvert(t time.Time) string {
 	return fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d", t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second())
@@ -45,4 +49,24 @@ func dateConvert(t time.Time) string {
 
 func dotToComma(f float64) string {
 	return strings.ReplaceAll(fmt.Sprintf("%.2f", f), ".", ",")
+}
+
+func PivotTableTransactions(report *Report) map[string]ReportTransaction {
+	result := make(map[string]ReportTransaction)
+	for _, tr := range *report {
+		if _, ok := result[tr.ID]; !ok {
+			result[tr.ID] = tr
+			continue
+		}
+		accTransaction := result[tr.ID]
+		accTransaction.Total += tr.Total
+		accTransaction.Quantity += tr.Quantity
+		accTransaction.Commission += tr.Commission
+		accTransaction.Date = time.Time{}
+		accTransaction.Status = ""
+		accTransaction.Type = ""
+		accTransaction.Price = 0
+		result[tr.ID] = accTransaction
+	}
+	return result
 }

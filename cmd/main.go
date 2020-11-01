@@ -2,9 +2,9 @@ package main
 
 import (
 	"base/internal"
+	"fmt"
 	sdk "github.com/TinkoffCreditSystems/invest-openapi-go-sdk"
 	"github.com/subosito/gotenv"
-
 	"os"
 )
 
@@ -14,12 +14,12 @@ func main() {
 
 	client := sdk.NewRestClient(token)
 	portfolio := internal.NewPortfolio(client)
-	report, err := portfolio.GetReport(100)
+	report, err := portfolio.GetReport(10)
 	if err != nil {
 		println(err.Error())
 		return
 	}
-
+	fmt.Printf("%+v", internal.PivotTableTransactions(report))
 	if err = saveToFile("report.csv", report.ToCSV()); err != nil {
 		println(err.Error())
 	}
